@@ -5,12 +5,6 @@ loadEnvironment({ path: ".env.local" });
 
 const environmentSchema = z.object({
   API_PORT: z.coerce.number().int().min(1024).max(65535).default(8787),
-  META_CALLBACK_PROXY_PORT: z.coerce
-    .number()
-    .int()
-    .min(1024)
-    .max(65535)
-    .default(8788),
   APP_ORIGIN: z.string().url().default("http://127.0.0.1:5173"),
   SYNC_INTERVAL_MINUTES: z.coerce
     .number()
@@ -40,7 +34,6 @@ const environmentSchema = z.object({
 
 export interface ServerConfig {
   port: number;
-  metaCallbackProxyPort: number;
   appOrigin: string;
   syncIntervalMinutes: number;
   meta: {
@@ -78,7 +71,6 @@ export function readServerConfig(
 ): ServerConfig {
   const values = environmentSchema.parse({
     API_PORT: environment.API_PORT,
-    META_CALLBACK_PROXY_PORT: environment.META_CALLBACK_PROXY_PORT,
     APP_ORIGIN: environment.APP_ORIGIN,
     SYNC_INTERVAL_MINUTES: environment.SYNC_INTERVAL_MINUTES,
     META_APP_ID: nonEmptyEnvironmentValue(environment.META_APP_ID),
@@ -106,7 +98,6 @@ export function readServerConfig(
 
   return {
     port: values.API_PORT,
-    metaCallbackProxyPort: values.META_CALLBACK_PROXY_PORT,
     appOrigin: values.APP_ORIGIN,
     syncIntervalMinutes: values.SYNC_INTERVAL_MINUTES,
     meta: {

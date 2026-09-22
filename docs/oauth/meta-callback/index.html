@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
+    <title>Completamento collegamento Meta</title>
+  </head>
+  <body>
+    <p id="status">Completamento del collegamento a Regali vicini...</p>
+    <script>
+      (() => {
+        const permittedParameters = [
+          "code",
+          "state",
+          "error",
+          "error_reason",
+          "error_description",
+        ];
+        const currentUrl = new URL(window.location.href);
+        const localCallback = new URL(
+          "http://127.0.0.1:8787/api/auth/meta/callback",
+        );
+
+        for (const parameter of permittedParameters) {
+          const value = currentUrl.searchParams.get(parameter);
+          if (value) localCallback.searchParams.set(parameter, value);
+        }
+
+        if (!localCallback.searchParams.has("state")) {
+          document.getElementById("status").textContent =
+            "Collegamento non valido o scaduto. Torna a Regali vicini e riprova.";
+          return;
+        }
+
+        window.location.replace(localCallback.toString());
+      })();
+    </script>
+  </body>
+</html>

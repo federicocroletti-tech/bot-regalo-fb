@@ -61,21 +61,23 @@ Apri `http://127.0.0.1:5173`. Se Vite indica un'altra porta, aggiorna `APP_ORIGI
 
 Il server locale sincronizza immediatamente all'avvio e poi ogni `SYNC_INTERVAL_MINUTES` minuti. Il valore predefinito e `360` (6 ore). Il computer e il processo `npm run dev:all` devono rimanere attivi per consentire le sincronizzazioni pianificate.
 
-## Callback HTTPS Meta in locale
+## Callback HTTPS Meta con GitHub Pages
 
-Facebook Login richiede un redirect OAuth HTTPS. Per il test locale il progetto include un callback isolato sulla porta `META_CALLBACK_PROXY_PORT` (predefinita `8788`): non espone il catalogo o le API dell'app, ma inoltra soltanto `GET /api/auth/meta/callback` al server loopback.
+Facebook Login richiede un redirect OAuth HTTPS. Per il test locale, il progetto include una pagina statica in `docs/oauth/meta-callback/`: riceve il callback HTTPS di Meta e inoltra esclusivamente `code`, `state` e gli eventuali parametri di errore al server loopback `127.0.0.1:8787`. Token e App Secret non transitano nella pagina GitHub Pages.
 
-1. Con API locale in esecuzione, avvia il tunnel di sviluppo:
+1. In GitHub apri il repository, quindi **Settings** → **Pages**.
+2. In **Build and deployment**, seleziona **Deploy from a branch**, poi `main` e la cartella `/docs`; salva.
+3. Attendi la pubblicazione su `https://federicocroletti-tech.github.io/bot-regalo-fb/`.
+4. Usa questo URL esatto sia in `META_REDIRECT_URI` di `.env.local`, sia in **Valid OAuth Redirect URIs** nelle impostazioni Facebook Login dell'app Meta:
 
-   ```powershell
-   npm run dev:meta-tunnel
+   ```text
+   https://federicocroletti-tech.github.io/bot-regalo-fb/oauth/meta-callback/
    ```
 
-2. Copia l'URL `https://...trycloudflare.com` mostrato dal comando e aggiungi `/api/auth/meta/callback`.
-3. Inserisci l'URL completo sia in `META_REDIRECT_URI` di `.env.local`, sia in **Valid OAuth Redirect URIs** nelle impostazioni Facebook Login dell'app Meta.
-4. Riavvia `npm run dev:api`, quindi usa **Collega Meta**.
+5. In **App settings** → **Basic**, configura `federicocroletti-tech.github.io` come dominio app e salva.
+6. Riavvia `npm run dev:all`, poi usa **Collega Meta**.
 
-I Quick Tunnel Cloudflare hanno URL casuali e sono soltanto per sviluppo. Se il tunnel viene riavviato, ripeti i punti 2-4. Per un utilizzo continuativo, usa un dominio HTTPS e un tunnel Cloudflare gestito.
+La pagina pubblica e solo un relay di sviluppo per il codice OAuth, che e monouso e viene validato dal parametro `state` sul server locale. Per un'app pubblica, usa un callback HTTPS gestito da un backend sotto il tuo controllo.
 
 ## Dati Meta necessari
 
@@ -86,7 +88,7 @@ Non inviare password, cookie, token o secret in chat. Inserisci i segreti solo i
 | `META_APP_ID`          | [Meta for Developers - My Apps](https://developers.facebook.com/apps/) → seleziona o crea l'app → **App settings** → **Basic** → App ID.                                                                                                                                                   |
 | `META_APP_SECRET`      | Stessa schermata → App secret. Mostralo e copialo direttamente in `.env.local`; Meta non lo espone di nuovo in chiaro.                                                                                                                                                                     |
 | `META_LOGIN_CONFIG_ID` | Consigliato: crea una **Business type app**, aggiungi **Facebook Login for Business**, poi **Configurations** → crea configurazione con i permessi minimi necessari. Copia il Configuration ID.                                                                                            |
-| `META_REDIRECT_URI`    | URL HTTPS esatto del callback, per esempio `https://<tunnel>.trycloudflare.com/api/auth/meta/callback`. Aggiungi lo stesso valore alle **Valid OAuth Redirect URIs** nelle impostazioni del prodotto Facebook Login.                                                                       |
+| `META_REDIRECT_URI`    | URL HTTPS esatto del callback: `https://federicocroletti-tech.github.io/bot-regalo-fb/oauth/meta-callback/`. Aggiungi lo stesso valore alle **Valid OAuth Redirect URIs** nelle impostazioni del prodotto Facebook Login.                                                               |
 | `META_PAGE_IDS`        | Inserisci gli ID delle sole Pagine che amministri, separati da virgole. Puoi ricavarli dalla risposta `/me/accounts` nel [Graph API Explorer](https://developers.facebook.com/tools/explorer/) dopo aver ottenuto un token, oppure dalle informazioni della Pagina in Meta Business Suite. |
 
 Per la lettura delle Pagine, la configurazione deve includere almeno le autorizzazioni necessarie al flusso di lettura, in particolare `pages_show_list` e `pages_read_engagement`. Meta richiede ruoli o task idonei sulla Pagina e App Review/Advanced Access quando l'app e live o serve persone esterne ai ruoli dell'app. Le Pagine esterne non gestite non sono supportate da questo connettore.

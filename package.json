@@ -9,7 +9,6 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "dev:api": "tsx watch server/index.ts",
-    "dev:meta-tunnel": "node scripts/start-meta-tunnel.mjs",
     "dev:all": "concurrently -k -n api,web -c cyan,green \"npm:dev:api\" \"npm:dev\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
