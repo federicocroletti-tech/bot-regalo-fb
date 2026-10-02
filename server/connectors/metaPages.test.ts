@@ -11,12 +11,13 @@ const config = readServerConfig({
 });
 
 describe("Meta Pages connector", () => {
-  it("creates a least-privilege authorization URL without exposing the app secret", () => {
+  it("requests only Page read permissions without exposing the app secret", () => {
     const url = new URL(createMetaAuthorizationUrl(config, "state-value"));
 
     expect(url.searchParams.get("scope")).toBe(
-      "pages_show_list,pages_read_engagement",
+      "business_management,pages_show_list,pages_read_engagement,pages_read_user_content",
     );
+    expect(url.searchParams.has("config_id")).toBe(false);
     expect(url.searchParams.get("state")).toBe("state-value");
     expect(url.search).not.toContain("app-secret");
   });

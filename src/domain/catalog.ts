@@ -54,10 +54,12 @@ export function createListing(
     url,
     sourceName: draft.sourceName.trim() || "Facebook",
     sourceText,
+    sourcePublishedAt: draft.sourcePublishedAt,
     notes: draft.notes?.trim() ?? "",
     title: classification.title,
     category: classification.category,
     isGiveaway: classification.isGiveaway,
+    isMilanRelated: classification.isMilanRelated,
     score: classification.score,
     status: "nuovo",
     createdAt: now,
@@ -69,24 +71,32 @@ export interface AutomaticImportResult {
   added: number;
   ignored: number;
   notGiveaway: number;
+  unclassified: number;
   listings: Listing[];
+}
+
+export interface AutomaticImportOptions {
+  includeUnclassified?: boolean;
 }
 
 export function importAutomaticListings(
   drafts: ListingDraft[],
   existingListings: Listing[],
+  options: AutomaticImportOptions = {},
 ): AutomaticImportResult {
   const listings = [...existingListings];
   let added = 0;
   let ignored = 0;
   let notGiveaway = 0;
+  let unclassified = 0;
 
   for (const draft of drafts) {
     try {
       const listing = createListing(draft, listings);
       if (!listing.isGiveaway) {
         notGiveaway += 1;
-        continue;
+        if (!options.includeUnclassified) continue;
+        unclassified += 1;
       }
 
       listings.unshift(listing);
@@ -96,7 +106,7 @@ export function importAutomaticListings(
     }
   }
 
-  return { added, ignored, notGiveaway, listings };
+  return { added, ignored, notGiveaway, unclassified, listings };
 }
 
 export function updateListingStatus(

@@ -10,6 +10,7 @@ describe("classifyListing", () => {
     expect(listing).toMatchObject({
       category: "Arredamento",
       isGiveaway: true,
+      isMilanRelated: true,
       score: 60,
     });
     expect(listing.title).toBe(
@@ -25,6 +26,7 @@ describe("classifyListing", () => {
     expect(listing).toMatchObject({
       category: "Arredamento",
       isGiveaway: false,
+      isMilanRelated: false,
       score: 25,
     });
   });

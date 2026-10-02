@@ -59,7 +59,17 @@ L'app non usa scraping, automazione del browser, cookie personali, API private o
 
 Apri `http://127.0.0.1:5173`. Se Vite indica un'altra porta, aggiorna `APP_ORIGIN` con quell'URL in `.env.local` e riavvia `npm run dev:all`.
 
-Il server locale sincronizza immediatamente all'avvio e poi ogni `SYNC_INTERVAL_MINUTES` minuti. Il valore predefinito e `360` (6 ore). Il computer e il processo `npm run dev:all` devono rimanere attivi per consentire le sincronizzazioni pianificate.
+Il server locale sincronizza immediatamente all'avvio e poi ogni `SYNC_INTERVAL_MINUTES` minuti. Il valore predefinito e `20`, con un pulsante **Controlla ora** per forzare un controllo immediato senza attendere il job. Il computer e il processo `npm run dev:all` devono rimanere attivi per consentire le sincronizzazioni pianificate.
+
+### Reti aziendali con ispezione HTTPS
+
+Se Node segnala `SELF_SIGNED_CERT_IN_CHAIN` durante le chiamate a Meta, non disabilitare la verifica TLS. Esporta invece la CA aziendale in un file PEM locale sotto `.data/certificates/`, quindi avvia l'app su Windows con:
+
+```powershell
+npm run dev:trusted-network
+```
+
+Il comando passa il bundle locale a Node tramite `NODE_EXTRA_CA_CERTS`; il bundle resta ignorato da Git.
 
 ## Callback HTTPS Meta con GitHub Pages
 
@@ -87,11 +97,11 @@ Non inviare password, cookie, token o secret in chat. Inserisci i segreti solo i
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `META_APP_ID`          | [Meta for Developers - My Apps](https://developers.facebook.com/apps/) → seleziona o crea l'app → **App settings** → **Basic** → App ID.                                                                                                                                                   |
 | `META_APP_SECRET`      | Stessa schermata → App secret. Mostralo e copialo direttamente in `.env.local`; Meta non lo espone di nuovo in chiaro.                                                                                                                                                                     |
-| `META_LOGIN_CONFIG_ID` | Consigliato: crea una **Business type app**, aggiungi **Facebook Login for Business**, poi **Configurations** → crea configurazione con i permessi minimi necessari. Copia il Configuration ID.                                                                                            |
-| `META_REDIRECT_URI`    | URL HTTPS esatto del callback: `https://federicocroletti-tech.github.io/bot-regalo-fb/oauth/meta-callback/`. Aggiungi lo stesso valore alle **Valid OAuth Redirect URIs** nelle impostazioni del prodotto Facebook Login.                                                               |
+| `META_LOGIN_CONFIG_ID` | Facoltativo: crea una configurazione User access token in **Facebook Login for Business** → **Configurations** e copia il Configuration ID. Senza questo valore l'app richiede direttamente gli scope minimi del caso Pages.                                                               |
+| `META_REDIRECT_URI`    | URL HTTPS esatto del callback: `https://federicocroletti-tech.github.io/bot-regalo-fb/oauth/meta-callback/`. Aggiungi lo stesso valore alle **Valid OAuth Redirect URIs** nelle impostazioni del prodotto Facebook Login.                                                                  |
 | `META_PAGE_IDS`        | Inserisci gli ID delle sole Pagine che amministri, separati da virgole. Puoi ricavarli dalla risposta `/me/accounts` nel [Graph API Explorer](https://developers.facebook.com/tools/explorer/) dopo aver ottenuto un token, oppure dalle informazioni della Pagina in Meta Business Suite. |
 
-Per la lettura delle Pagine, la configurazione deve includere almeno le autorizzazioni necessarie al flusso di lettura, in particolare `pages_show_list` e `pages_read_engagement`. Meta richiede ruoli o task idonei sulla Pagina e App Review/Advanced Access quando l'app e live o serve persone esterne ai ruoli dell'app. Le Pagine esterne non gestite non sono supportate da questo connettore.
+Per la lettura delle Pagine, aggiungi il caso d'uso Meta **Manage everything on your Page**: include `business_management`, `pages_show_list` e `public_profile`. Aggiungi inoltre `pages_read_engagement` e `pages_read_user_content`: la reference del feed Meta richiede entrambe per leggere `/{page-id}/feed`. Il connettore richiede le permission necessarie nel consenso OAuth. Meta richiede ruoli o task idonei sulla Pagina e App Review/Advanced Access quando l'app e live o serve persone esterne ai ruoli dell'app. Le Pagine esterne non gestite non sono supportate da questo connettore.
 
 Dopo aver compilato le variabili Meta e riavviato il server, usa **Collega Meta** nell'app. Il consenso avviene sul sito Meta; l'access token viene cifrato localmente in `.data/connector-tokens.json` e non viene mostrato nell'interfaccia.
 
@@ -104,15 +114,16 @@ Dopo aver compilato le variabili Meta e riavviato il server, usa **Collega Meta*
 5. Aggiungi esattamente `http://127.0.0.1:8787/api/auth/gmail/callback` come Authorized redirect URI.
 6. Copia Client ID e Client Secret in `GMAIL_CLIENT_ID` e `GMAIL_CLIENT_SECRET` di `.env.local`.
 
-Il connettore richiede esclusivamente lo scope `https://www.googleapis.com/auth/gmail.readonly` per leggere le email restituite da `GMAIL_QUERY`; non invia, modifica o elimina messaggi. Questo scope e classificato da Google come **restricted**: per un'app pubblica possono essere necessari verifica OAuth e requisiti aggiuntivi di sicurezza. Per uso personale locale, aggiungi il tuo account come test user nella schermata di consenso.
+Il connettore richiede esclusivamente lo scope `https://www.googleapis.com/auth/gmail.readonly` per leggere le email restituite da `GMAIL_QUERY`; non invia, modifica o elimina messaggi. Quando Facebook non include il testo dell'annuncio nell'email, un permalink valido di post viene mantenuto come candidato `Da verificare` invece di essere scartato. Link di sicurezza, profilo e impostazioni Facebook vengono esclusi. Questo scope e classificato da Google come **restricted**: per un'app pubblica possono essere necessari verifica OAuth e requisiti aggiuntivi di sicurezza. Per uso personale locale, aggiungi il tuo account come test user nella schermata di consenso.
 
-Attiva le notifiche email Facebook per i gruppi che vuoi seguire e, se disponibili, per gli avvisi Marketplace. In Facebook usa le impostazioni del gruppo per scegliere le notifiche di tutti i post e le impostazioni delle notifiche email dell'account per riceverle nella casella Gmail collegata. L'app analizza solo le notifiche identificate dalla query Gmail configurata.
+Attiva le notifiche email Facebook per i gruppi che vuoi seguire e, se disponibili, per gli avvisi Marketplace. In Facebook usa le impostazioni del gruppo per scegliere le notifiche di tutti i post e le impostazioni delle notifiche email dell'account per riceverle nella casella Gmail collegata. L'app analizza solo le notifiche identificate dalla query Gmail configurata; privilegia i candidati che citano Milano o l'area milanese.
 
 Dopo aver compilato le variabili Google e riavviato il server, usa **Collega Gmail** nell'app. Il consenso avviene su Google; access token e refresh token restano cifrati nella cartella locale `.data`.
 
 ## Catalogo e sicurezza
 
 - I risultati sono salvati in `.data/catalog.json`; il browser mantiene una cache locale per l'interfaccia.
+- L'elenco leggibile con titolo e link viene aggiornato automaticamente in `.data/catalogo-regali.md`.
 - Token OAuth sono cifrati con AES-256-GCM in `.data/connector-tokens.json` usando `TOKEN_ENCRYPTION_KEY`.
 - `.env.local` e `.data/` sono esclusi dal repository.
 - Gli endpoint che cambiano dati accettano richieste solo dall'origine locale configurata.

@@ -453,6 +453,25 @@ h2 span {
   border-left: 1px solid #cbd5cc;
   color: #174a43;
 }
+.listing-source .milan-tag {
+  margin-left: 6px;
+  padding: 3px 5px;
+  border: 0;
+  border-radius: 3px;
+  background: #e5b346;
+  color: #463209;
+  font-size: 11px;
+  font-weight: 700;
+}
+.listing-source .listing-date {
+  margin-left: 6px;
+  padding-left: 6px;
+  border: 0;
+  border-left: 1px solid #cbd5cc;
+  color: #64746d;
+  font-size: 11px;
+  font-weight: 400;
+}
 .listing-note {
   color: #384b43;
   font-style: italic;

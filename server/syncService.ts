@@ -17,6 +17,7 @@ export interface SyncSummary {
   connector: SyncConnector;
   ignored: number;
   notGiveaway: number;
+  unclassified: number;
   syncedAt: string;
   warnings: string[];
 }
@@ -85,12 +86,14 @@ export class ConnectorSyncService {
             );
       const imported = await this.catalogStore.importDrafts(
         sourceResult.listings,
+        { includeUnclassified: connector === "gmail-notifications" },
       );
       const summary: SyncSummary = {
         added: imported.added,
         connector,
         ignored: imported.ignored,
         notGiveaway: imported.notGiveaway,
+        unclassified: imported.unclassified,
         syncedAt: new Date().toISOString(),
         warnings: sourceResult.warnings,
       };

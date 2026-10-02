@@ -20,6 +20,7 @@ export interface ListingDraft {
   url: string;
   sourceName: string;
   sourceText: string;
+  sourcePublishedAt?: string;
   notes?: string;
 }
 
@@ -29,6 +30,7 @@ export interface Listing extends ListingDraft {
   category: Category;
   status: ListingStatus;
   isGiveaway: boolean;
+  isMilanRelated: boolean;
   score: number;
   createdAt: string;
   updatedAt: string;
@@ -38,5 +40,6 @@ export interface Classification {
   title: string;
   category: Category;
   isGiveaway: boolean;
+  isMilanRelated: boolean;
   score: number;
 }

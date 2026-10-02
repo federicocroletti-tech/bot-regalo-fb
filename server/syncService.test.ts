@@ -19,7 +19,13 @@ describe("ConnectorSyncService", () => {
       list: async () => [],
       importDrafts: async (drafts) => {
         importedSourceText = drafts[0]?.sourceText ?? "";
-        return { added: 1, ignored: 0, notGiveaway: 0, listings: [] };
+        return {
+          added: 1,
+          ignored: 0,
+          notGiveaway: 0,
+          unclassified: 0,
+          listings: [],
+        };
       },
       remove: async () => false,
       updateStatus: async () => undefined,

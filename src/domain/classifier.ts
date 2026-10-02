@@ -23,6 +23,9 @@ const categoryPatterns: Array<[Category, RegExp]> = [
   ["Casa", /\b(stoviglie|piatti|bicchieri|pentole|lampada|specchio)\b/i],
 ];
 
+const milanPattern =
+  /\b(milano|milanese|hinterland milanese|sesto san giovanni|cologno monzese|rho|legnano|monza)\b/i;
+
 function titleFromText(text: string): string {
   const firstLine = text
     .split(/\r?\n|[.!?]/)[0]
@@ -48,6 +51,7 @@ export function classifyListing(text: string): Classification {
     title: titleFromText(normalizedText),
     category,
     isGiveaway: giveawayMatches > 0,
+    isMilanRelated: milanPattern.test(normalizedText),
     score: Math.min(
       100,
       giveawayMatches * 35 + (category === "Altro" ? 0 : 25),

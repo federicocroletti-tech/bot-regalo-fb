@@ -161,6 +161,22 @@ function isFacebookHost(host: string): boolean {
   );
 }
 
+function isFacebookPostUrl(url: URL): boolean {
+  const path = url.pathname.toLowerCase();
+
+  if (path === "/permalink.php" || path === "/story.php") {
+    return Boolean(
+      url.searchParams.get("story_fbid") && url.searchParams.get("id"),
+    );
+  }
+
+  if (/^\/groups\/[^/]+\/(posts|permalink)\/[^/]+/.test(path)) {
+    return true;
+  }
+
+  return /^\/[^/]+\/posts\/[^/]+/.test(path);
+}
+
 export function extractFacebookUrls(text: string): string[] {
   const candidates = text.match(/https?:\/\/[^\s<>"']+/gi) ?? [];
   const urls = new Set<string>();
@@ -174,7 +190,12 @@ export function extractFacebookUrls(text: string): string[] {
           : undefined;
       const resolved = redirectTarget ? new URL(redirectTarget) : url;
 
-      if (!isFacebookHost(resolved.hostname.toLowerCase())) continue;
+      if (
+        !isFacebookHost(resolved.hostname.toLowerCase()) ||
+        !isFacebookPostUrl(resolved)
+      ) {
+        continue;
+      }
       resolved.hash = "";
       ["ref", "mibextid", "rdid"].forEach((parameter) =>
         resolved.searchParams.delete(parameter),

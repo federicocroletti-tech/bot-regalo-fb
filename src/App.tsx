@@ -24,6 +24,7 @@ const statuses: Array<{ value: ListingStatus; label: string }> = [
 ];
 
 type ConnectorId = "meta-pages" | "gmail-notifications";
+type DateFilter = "today" | "all";
 
 interface ConnectorState {
   id: ConnectorId;
@@ -36,6 +37,7 @@ interface SyncSummary {
   added: number;
   ignored: number;
   notGiveaway: number;
+  unclassified: number;
   warnings: string[];
 }
 
@@ -86,12 +88,34 @@ function connectorStateText(connector: ConnectorState | undefined): string {
   return "Da configurare";
 }
 
+function milanDateKey(value: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Rome",
+    year: "numeric",
+  }).formatToParts(new Date(value));
+  const part = (type: "year" | "month" | "day") =>
+    parts.find((candidate) => candidate.type === type)?.value ?? "";
+
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function displayMilanDate(value: string): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "Europe/Rome",
+  }).format(new Date(value));
+}
+
 function App() {
   const [listings, setListings] = useState<Listing[]>(loadListings);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ListingStatus | "tutti">(
     "tutti",
   );
+  const [dateFilter, setDateFilter] = useState<DateFilter>("today");
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [connectors, setConnectors] = useState<ConnectorState[]>([]);
   const [connectorError, setConnectorError] = useState<string | null>(null);
@@ -179,10 +203,20 @@ function App() {
         .toLowerCase()
         .includes(query);
     })
-    .sort((first, second) => second.createdAt.localeCompare(first.createdAt));
+    .filter(
+      (listing) =>
+        dateFilter === "all" ||
+        milanDateKey(listing.sourcePublishedAt ?? listing.createdAt) ===
+          milanDateKey(new Date().toISOString()),
+    )
+    .sort(
+      (first, second) =>
+        Number(second.isMilanRelated) - Number(first.isMilanRelated) ||
+        second.createdAt.localeCompare(first.createdAt),
+    );
 
-  const giveawayCount = listings.filter(
-    (listing) => listing.isGiveaway && listing.status !== "archiviato",
+  const candidateCount = listings.filter(
+    (listing) => listing.status !== "archiviato",
   ).length;
   const metaConnector = connectors.find(
     (connector) => connector.id === "meta-pages",
@@ -216,7 +250,9 @@ function App() {
       setListings(await requestCatalog());
       setSyncMessage(
         summary.added
-          ? `Aggiunti ${summary.added} nuovi annunci in regalo.${summary.notGiveaway ? ` Esclusi ${summary.notGiveaway} messaggi non pertinenti.` : ""}${summary.ignored ? ` Ignorati ${summary.ignored} duplicati.` : ""}`
+          ? `Aggiunti ${summary.added} nuovi post.${summary.unclassified ? ` ${summary.unclassified} sono da verificare: Facebook non ha incluso il testo dell'annuncio nella notifica.` : ""}${summary.ignored ? ` Ignorati ${summary.ignored} duplicati.` : ""}`
+          : connector === "gmail-notifications" && summary.warnings.length
+            ? "Nessun permalink di post ricevuto nelle notifiche Facebook disponibili."
           : "Nessun nuovo annuncio in regalo trovato.",
       );
 
@@ -327,8 +363,8 @@ function App() {
         <aside className="sidebar">
           <div className="metric">
             <span>Da valutare</span>
-            <strong>{giveawayCount}</strong>
-            <small>annunci con parole chiave regalo</small>
+            <strong>{candidateCount}</strong>
+            <small>annunci regalo o candidati dalle fonti autorizzate</small>
           </div>
           <div className="policy-note">
             <ShieldCheck size={18} aria-hidden="true" />
@@ -409,7 +445,7 @@ function App() {
                     />
                     {syncingConnector === "meta-pages"
                       ? "Sincronizzo..."
-                      : "Sincronizza"}
+                      : "Controlla Pagina"}
                   </button>
                 </div>
               </article>
@@ -472,7 +508,7 @@ function App() {
                     />
                     {syncingConnector === "gmail-notifications"
                       ? "Sincronizzo..."
-                      : "Importa notifiche"}
+                      : "Controlla ora"}
                   </button>
                 </div>
               </article>
@@ -505,7 +541,8 @@ function App() {
               <div>
                 <p className="eyebrow">Archivio</p>
                 <h2 id="catalog-heading">
-                  Post catalogati <span>{visibleListings.length}</span>
+                  {dateFilter === "today" ? "Post di oggi" : "Post catalogati"}{" "}
+                  <span>{visibleListings.length}</span>
                 </h2>
               </div>
               <div className="filters">
@@ -533,6 +570,16 @@ function App() {
                       {status.label}
                     </option>
                   ))}
+                </select>
+                <select
+                  value={dateFilter}
+                  onChange={(event) =>
+                    setDateFilter(event.target.value as DateFilter)
+                  }
+                  aria-label="Filtra per data"
+                >
+                  <option value="today">Oggi</option>
+                  <option value="all">Tutti i giorni</option>
                 </select>
               </div>
             </div>
@@ -562,6 +609,14 @@ function App() {
                     <h3>{listing.title}</h3>
                     <p className="listing-source">
                       {listing.sourceName} <span>{listing.category}</span>
+                      {listing.isMilanRelated && (
+                        <span className="milan-tag">Milano</span>
+                      )}
+                      <span className="listing-date">
+                        {displayMilanDate(
+                          listing.sourcePublishedAt ?? listing.createdAt,
+                        )}
+                      </span>
                     </p>
                     {listing.notes && (
                       <p className="listing-note">{listing.notes}</p>
@@ -600,10 +655,14 @@ function App() {
             ) : (
               <div className="empty-state">
                 <Inbox size={30} aria-hidden="true" />
-                <h3>In attesa delle fonti automatiche</h3>
+                <h3>
+                  {dateFilter === "today"
+                    ? "Nessun post ricevuto oggi"
+                    : "In attesa delle fonti automatiche"}
+                </h3>
                 <p>
-                  Collega Meta o Gmail, poi avvia una sincronizzazione: saranno
-                  salvati soltanto gli annunci riconosciuti come regali.
+                  Controlla ora per aggiornare le fonti autorizzate. I post
+                  ricevuti oggi vengono mostrati prima, con fonte, data e link.
                 </p>
                 <a href="#sources-heading" className="text-link">
                   <Link2 size={15} aria-hidden="true" /> Configura le fonti

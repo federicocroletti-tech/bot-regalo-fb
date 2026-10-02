@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import {
   importAutomaticListings,
+  type AutomaticImportOptions,
   updateListingStatus,
   type AutomaticImportResult,
 } from "../src/domain/catalog.js";
@@ -18,9 +19,11 @@ const listingSchema = z.object({
   createdAt: z.string().datetime(),
   id: z.string().min(1),
   isGiveaway: z.boolean(),
+  isMilanRelated: z.boolean().default(false),
   notes: z.string().optional(),
   score: z.number().int().min(0).max(100),
   sourceName: z.string(),
+  sourcePublishedAt: z.string().datetime().optional(),
   sourceText: z.string(),
   status: z.enum(["nuovo", "da-contattare", "richiesto", "archiviato"]),
   title: z.string(),
@@ -30,7 +33,10 @@ const listingSchema = z.object({
 
 export interface CatalogStore {
   list(): Promise<Listing[]>;
-  importDrafts(drafts: ListingDraft[]): Promise<AutomaticImportResult>;
+  importDrafts(
+    drafts: ListingDraft[],
+    options?: AutomaticImportOptions,
+  ): Promise<AutomaticImportResult>;
   updateStatus(id: string, status: ListingStatus): Promise<Listing | undefined>;
   remove(id: string): Promise<boolean>;
 }
@@ -38,18 +44,24 @@ export interface CatalogStore {
 export class FileCatalogStore implements CatalogStore {
   private queue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly filePath: string) {}
+  constructor(
+    private readonly filePath: string,
+    private readonly reportPath = localCatalogReportPath(dirname(filePath)),
+  ) {}
 
   async list(): Promise<Listing[]> {
     await this.queue;
     return this.readAll();
   }
 
-  async importDrafts(drafts: ListingDraft[]): Promise<AutomaticImportResult> {
+  async importDrafts(
+    drafts: ListingDraft[],
+    options?: AutomaticImportOptions,
+  ): Promise<AutomaticImportResult> {
     return this.withLock(async () => {
       const current = await this.readAll();
-      const result = importAutomaticListings(drafts, current);
-      if (result.added > 0) await this.writeAll(result.listings);
+      const result = importAutomaticListings(drafts, current, options);
+      await this.writeAll(result.listings);
       return result;
     });
   }
@@ -110,12 +122,17 @@ export class FileCatalogStore implements CatalogStore {
 
   private async writeAll(listings: Listing[]): Promise<void> {
     await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
-    const temporaryPath = `${this.filePath}.${process.pid}.tmp`;
-    await writeFile(temporaryPath, JSON.stringify(listings), {
+    await this.writeAtomically(this.filePath, JSON.stringify(listings));
+    await this.writeAtomically(this.reportPath, renderCatalogReport(listings));
+  }
+
+  private async writeAtomically(path: string, content: string): Promise<void> {
+    const temporaryPath = `${path}.${process.pid}.tmp`;
+    await writeFile(temporaryPath, content, {
       encoding: "utf8",
       mode: 0o600,
     });
-    await rename(temporaryPath, this.filePath);
+    await rename(temporaryPath, path);
   }
 }
 
@@ -129,4 +146,52 @@ function isMissingFile(error: unknown): error is NodeJS.ErrnoException {
 
 export function localCatalogPath(projectRoot = process.cwd()): string {
   return join(projectRoot, ".data", "catalog.json");
+}
+
+export function localCatalogReportPath(
+  dataDirectory = join(process.cwd(), ".data"),
+): string {
+  return join(dataDirectory, "catalogo-regali.md");
+}
+
+function escapeMarkdownLinkText(value: string): string {
+  return value.replace(/[\\[\]]/g, "\\$&");
+}
+
+function reportDate(listing: Listing): string {
+  const value = listing.sourcePublishedAt ?? listing.createdAt;
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Europe/Rome",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+export function renderCatalogReport(listings: Listing[]): string {
+  const header = [
+    "# Catalogo regali Facebook",
+    "",
+    `Post catalogati: ${listings.length}`,
+    "",
+  ];
+
+  if (!listings.length) {
+    return [
+      ...header,
+      "Nessun post regalo trovato nelle fonti sincronizzate.",
+      "",
+    ].join("\n");
+  }
+
+  const links = listings.map(
+    (listing) =>
+      [
+        `- [${escapeMarkdownLinkText(listing.title)}](${listing.url})`,
+        `  - Fonte: ${listing.sourceName}`,
+        `  - Data: ${reportDate(listing)}`,
+        `  - Stato: ${listing.status}`,
+      ].join("\n"),
+  );
+  return [...header, ...links, ""].join("\n");
 }

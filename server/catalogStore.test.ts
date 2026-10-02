@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,10 +6,16 @@ import { FileCatalogStore } from "./catalogStore.js";
 
 const directories: string[] = [];
 
-async function createStore(): Promise<FileCatalogStore> {
+async function createStore(): Promise<{
+  reportPath: string;
+  store: FileCatalogStore;
+}> {
   const directory = await mkdtemp(join(tmpdir(), "regali-vicini-catalog-"));
   directories.push(directory);
-  return new FileCatalogStore(join(directory, "catalog.json"));
+  return {
+    reportPath: join(directory, "catalogo-regali.md"),
+    store: new FileCatalogStore(join(directory, "catalog.json")),
+  };
 }
 
 afterEach(async () => {
@@ -22,7 +28,7 @@ afterEach(async () => {
 
 describe("FileCatalogStore", () => {
   it("persists automatic imports and serializes simultaneous writes", async () => {
-    const store = await createStore();
+    const { reportPath, store } = await createStore();
 
     const [first, second] = await Promise.all([
       store.importDrafts([
@@ -43,10 +49,16 @@ describe("FileCatalogStore", () => {
 
     expect(first.added + second.added).toBe(2);
     expect(await store.list()).toHaveLength(2);
+    await expect(readFile(reportPath, "utf8")).resolves.toContain(
+      "[Regalo tavolo in legno](https://www.facebook.com/groups/regali/posts/101)",
+    );
+    await expect(readFile(reportPath, "utf8")).resolves.toContain(
+      "Fonte: Regali Milano",
+    );
   });
 
   it("updates and removes a saved listing", async () => {
-    const store = await createStore();
+    const { reportPath, store } = await createStore();
     await store.importDrafts([
       {
         url: "https://www.facebook.com/groups/regali/posts/303",
@@ -61,5 +73,8 @@ describe("FileCatalogStore", () => {
     });
     expect(await store.remove(listing.id)).toBe(true);
     expect(await store.list()).toEqual([]);
+    await expect(readFile(reportPath, "utf8")).resolves.toContain(
+      "Nessun post regalo trovato nelle fonti sincronizzate.",
+    );
   });
 });

@@ -70,7 +70,10 @@ export function createMetaAuthorizationUrl(
   if (config.meta.loginConfigId) {
     parameters.set("config_id", config.meta.loginConfigId);
   } else {
-    parameters.set("scope", "pages_show_list,pages_read_engagement");
+    parameters.set(
+      "scope",
+      "business_management,pages_show_list,pages_read_engagement,pages_read_user_content",
+    );
   }
 
   endpoint.search = parameters.toString();

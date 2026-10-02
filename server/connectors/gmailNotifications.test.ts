@@ -9,4 +9,16 @@ describe("Gmail notification connector", () => {
 
     expect(urls).toEqual(["https://www.facebook.com/groups/regali/posts/42"]);
   });
+
+  it("discards Facebook account, profile, and settings links", () => {
+    const urls = extractFacebookUrls(
+      [
+        "https://www.facebook.com/n/?login_alerts%2Fstart%2F=1",
+        "https://www.facebook.com/profile.php?id=100089639571362",
+        "https://www.facebook.com/help/check-email",
+      ].join(" "),
+    );
+
+    expect(urls).toEqual([]);
+  });
 });

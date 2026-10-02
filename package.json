@@ -10,6 +10,7 @@
     "dev": "vite --host 127.0.0.1",
     "dev:api": "tsx watch server/index.ts",
     "dev:all": "concurrently -k -n api,web -c cyan,green \"npm:dev:api\" \"npm:dev\"",
+    "dev:trusted-network": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev-with-extra-ca.ps1",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
