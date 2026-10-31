@@ -1,10 +1,10 @@
-# Proprieta e tutela - bot-regalo-fb
+# Proprieta e tutela - Bot-FB
 
 Copyright (c) 2026 Federico Croletti, per i soli contributi originali di cui detiene i diritti, secondo la sua dichiarazione. Post, marchi e materiali di terzi esclusi.
 
 Licenze e autorizzazioni preesistenti restano valide. Per i contributi originali senza altra licenza o accordo applicabile, tutti i diritti sono riservati nei limiti di legge.
 
-Proposta preliminare: documentare il catalogo locale di post relativi a oggetti gratuiti per eventuale registrazione software. Verificare se e una copia o versione di Bot-FB. Confermare autori, titolarita, versione, linguaggi e prima pubblicazione; escludere dati personali dall'esemplare.
+Proposta preliminare: documentare il catalogo locale di post relativi a oggetti gratuiti per eventuale registrazione software. Confrontare con bot-regalo-fb prima di considerarlo opera distinta. Confermare autori, titolarita, versione, linguaggi e prima pubblicazione; escludere dati personali dall'esemplare.
 
 Preparato il 15 ottobre 2026; anno dell'avviso, non prova della creazione. Nessun deposito effettuato; brevettabilita non accertata, da valutare con un professionista su una soluzione tecnica documentata.
 
